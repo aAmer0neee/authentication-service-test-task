@@ -3,9 +3,11 @@ package postgres
 import (
 	"fmt"
 	"log"
+	"net"
 
 	"github.com/aAmer0neee/authentication-service-test-task/internal/config"
 	"github.com/aAmer0neee/authentication-service-test-task/internal/domain"
+	"github.com/google/uuid"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -45,4 +47,25 @@ func (r *PostgresRepository) AddRecord(record *domain.User, hash string) error {
 		TokenHash: hash,
 		Email:     record.Email,
 	}).Error
+}
+
+func(r*PostgresRepository)UpdateRecord(record *domain.User, hash string) error{
+	fmt.Printf("Updating record with ID %s. IpAddress: %s, TokenHash: %s\n", record.Id, record.IpAddress.String(), hash)
+	return r.db.Where("id = ?", record.Id).Updates(&Users{
+		IpAddress: record.IpAddress.String(),
+		TokenHash: hash,
+	}).Error
+}
+
+func (r *PostgresRepository)GetRecord(id uuid.UUID)(*domain.User, error){
+	record := &Users{}
+	if err := r.db.First(record, "id = ?", id).Error; err != nil {
+		return nil, err
+	}
+	return &domain.User{
+		Id: record.Id,
+		Email: record.Email,
+		IpAddress: net.IP(record.IpAddress),
+		RefreshToken: record.TokenHash,
+	}, nil
 }

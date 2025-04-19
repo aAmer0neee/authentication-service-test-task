@@ -3,7 +3,10 @@ package auth
 import (
 	"crypto/rand"
 	"encoding/base64"
+
 	"fmt"
+
+	
 	"time"
 
 	"github.com/aAmer0neee/authentication-service-test-task/internal/domain"
@@ -22,12 +25,12 @@ func configureJWT(secretKey string) *JWTService {
 func (j *JWTService) generateAccess(user domain.User) (string, error) {
 	return jwt.NewWithClaims(jwt.SigningMethodHS512, jwt.MapClaims{
 		"user_id":    user.Id,
-		"ip_address": user.IpAddress,
+		"ip_address": user.IpAddress.String(),
 		"exp":        time.Now().Add(time.Minute * 10).Unix(),
 	}).SignedString(j.secretKey)
 }
 
-func (j *JWTService) validate(user domain.User) error {
+func (j *JWTService) validate(user domain.User) (*domain.AccessClaims,error) {
 	token, err := jwt.Parse(user.AccessToken, func(t *jwt.Token) (interface{}, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); ok {
 			if t.Method.Alg() == jwt.SigningMethodHS512.Alg() {
@@ -38,17 +41,18 @@ func (j *JWTService) validate(user domain.User) error {
 	})
 
 	if err != nil {
-		return err
+		return nil,err
 	}
-	if j.getExpTime(token) < time.Now().Unix() ||
-		j.getUserID(token) != user.Id.String() {
-		return fmt.Errorf("non valid token")
-	}
-	return nil
+
+	return &domain.AccessClaims{ 
+		ExpiredAt: j.getExpTime(token),
+		UserId: j.getUserID(token),
+		IpAddress: j.getIpAddress(token),
+		},nil
 }
 
-func (j *JWTService) getExpTime(token *jwt.Token) int64 {
-	return token.Claims.(jwt.MapClaims)["exp"].(int64)
+func (j *JWTService) getExpTime(token *jwt.Token) float64{
+	return token.Claims.(jwt.MapClaims)["exp"].(float64)
 }
 
 func (j *JWTService) getUserID(token *jwt.Token) string {
@@ -58,6 +62,10 @@ func (j *JWTService) getUserID(token *jwt.Token) string {
 		return ""
 	}
 	return value.(string) */
+}
+
+func(j *JWTService)getIpAddress(token *jwt.Token)string {
+	return token.Claims.(jwt.MapClaims)["ip_address"].(string)
 }
 
 func (j *JWTService) generateRefresh() string {

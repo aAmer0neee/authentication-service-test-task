@@ -61,15 +61,13 @@ func (r *GinApi) handleLogin(ctx *gin.Context) {
 		IpAddress: ip,
 	}
 
-	if err := r.service.LoginUser(user); err != nil {
+	 tokens,err := r.service.LoginUser(user)
+	 if err != nil {
 		ctx.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{
-		"Access":  user.AccessToken,
-		"Refresh": user.RefreshToken,
-	})
+	ctx.JSON(http.StatusOK,tokens)
 }
 
 func (r *GinApi) handleRefresh(ctx *gin.Context) {
@@ -85,14 +83,15 @@ func (r *GinApi) handleRefresh(ctx *gin.Context) {
 		return
 	}
 
-	if err := r.service.RefreshToken(&domain.User{
+	tokens,err := r.service.RefreshToken(&domain.User{
 		AccessToken:  request.AccessToken,
 		RefreshToken: request.RefreshToken,
 		IpAddress:    ip,
-	}); err != nil {
+	})
+	if err != nil {
 		ctx.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{})
+	ctx.JSON(http.StatusOK, tokens)
 }

@@ -7,8 +7,8 @@ import (
 )
 
 type RefreshRequest struct {
-	AccessToken  string `json:"access-token" binding:"required"`
-	RefreshToken string `json:"refresh-token" binding:"required"`
+	AccessToken  string `json:"Access" binding:"required"`
+	RefreshToken string `json:"Refresh" binding:"required"`
 }
 
 type LoginRequest struct {
@@ -22,4 +22,15 @@ type User struct {
 	IpAddress    net.IP
 	AccessToken  string
 	RefreshToken string
+}
+
+type AccessClaims struct {
+	UserId string
+	ExpiredAt float64
+	IpAddress string
+}
+
+type Tokens struct {
+	Access  string
+	Refresh string
 }
