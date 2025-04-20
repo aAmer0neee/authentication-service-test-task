@@ -1,13 +1,13 @@
 package api
 
 import (
+	"errors"
 	"fmt"
-	"net"
-	"net/http"
-
 	"github.com/aAmer0neee/authentication-service-test-task/internal/auth"
 	"github.com/aAmer0neee/authentication-service-test-task/internal/domain"
 	"github.com/gin-gonic/gin"
+	"net"
+	"net/http"
 )
 
 type GinApi struct {
@@ -43,7 +43,7 @@ func (r *GinApi) configureMiddleware() {
 }
 
 func (r *GinApi) handleLogin(ctx *gin.Context) {
-	request := &domain.LoginRequest{}
+	request := &LoginRequest{}
 
 	if err := ctx.ShouldBindJSON(request); err != nil {
 		ctx.AbortWithError(http.StatusBadRequest, fmt.Errorf("missing required params"))
@@ -61,17 +61,17 @@ func (r *GinApi) handleLogin(ctx *gin.Context) {
 		IpAddress: ip,
 	}
 
-	 tokens,err := r.service.LoginUser(user)
-	 if err != nil {
-		ctx.AbortWithStatus(http.StatusUnauthorized)
+	tokens, err := r.service.LoginUser(user)
+	if err != nil {
+		unwrapErr(ctx, err)
 		return
 	}
 
-	ctx.JSON(http.StatusOK,tokens)
+	ctx.JSON(http.StatusOK, tokens)
 }
 
 func (r *GinApi) handleRefresh(ctx *gin.Context) {
-	request := &domain.RefreshRequest{}
+	request := &RefreshRequest{}
 	if err := ctx.ShouldBindJSON(request); err != nil {
 		ctx.AbortWithError(http.StatusBadRequest, fmt.Errorf("missing required params"))
 		return
@@ -83,15 +83,29 @@ func (r *GinApi) handleRefresh(ctx *gin.Context) {
 		return
 	}
 
-	tokens,err := r.service.RefreshToken(&domain.User{
+	tokens, err := r.service.RefreshToken(&domain.User{
 		AccessToken:  request.AccessToken,
 		RefreshToken: request.RefreshToken,
 		IpAddress:    ip,
 	})
 	if err != nil {
-		ctx.AbortWithStatus(http.StatusUnauthorized)
+		unwrapErr(ctx, err)
 		return
 	}
 
 	ctx.JSON(http.StatusOK, tokens)
+}
+
+func unwrapErr(ctx *gin.Context, err error) {
+	switch {
+	case errors.Is(err, auth.ErrorInvalidFormat):
+		ctx.AbortWithError(http.StatusBadRequest, err)
+	case errors.Is(err, auth.ErrorInvalidTokens):
+		ctx.AbortWithError(http.StatusUnauthorized, err)
+	case errors.Is(err, auth.ErrorTokenExpired):
+		ctx.AbortWithError(http.StatusUnauthorized, err)
+	default:
+		ctx.AbortWithStatus(http.StatusInternalServerError)
+	}
+
 }

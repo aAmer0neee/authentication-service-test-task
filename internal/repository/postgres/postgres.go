@@ -40,32 +40,34 @@ func Connect(cfg config.Cfg) (*PostgresRepository, error) {
 	return &PostgresRepository{db: postgres}, nil
 }
 
-func (r *PostgresRepository) AddRecord(record *domain.User, hash string) error {
+func (r *PostgresRepository) AddRecord(record *domain.User, hash string,pairId uuid.UUID) error {
 	return r.db.Create(&Users{
 		Id:        record.Id,
 		IpAddress: record.IpAddress.String(),
 		TokenHash: hash,
+		PairId: pairId,
 		Email:     record.Email,
 	}).Error
 }
 
-func(r*PostgresRepository)UpdateRecord(record *domain.User, hash string) error{
-	fmt.Printf("Updating record with ID %s. IpAddress: %s, TokenHash: %s\n", record.Id, record.IpAddress.String(), hash)
+func (r *PostgresRepository) UpdateRecord(record *domain.User, hash string, pairId uuid.UUID) error {
 	return r.db.Where("id = ?", record.Id).Updates(&Users{
 		IpAddress: record.IpAddress.String(),
 		TokenHash: hash,
+		PairId: pairId,
 	}).Error
 }
 
-func (r *PostgresRepository)GetRecord(id uuid.UUID)(*domain.User, error){
+func (r *PostgresRepository) GetRecord(id uuid.UUID) (*domain.User, error) {
 	record := &Users{}
 	if err := r.db.First(record, "id = ?", id).Error; err != nil {
 		return nil, err
 	}
 	return &domain.User{
-		Id: record.Id,
-		Email: record.Email,
-		IpAddress: net.IP(record.IpAddress),
+		Id:           record.Id,
+		Email:        record.Email,
+		IpAddress:    net.ParseIP(record.IpAddress),
 		RefreshToken: record.TokenHash,
+		TokenPairId: record.PairId,
 	}, nil
 }

@@ -34,6 +34,13 @@ type Cfg struct {
 		Migrate  bool   `yaml:"migrate" env-default:"false"`
 		Sslmode  string `yaml:"sslmode" env-default:"disable"`
 	} `yaml:"postgres" env-required:"true"`
+
+	Notifyer struct {
+		SmtpHost string `yaml:"smtp-host" env-required:"false"`
+		SmtpPort string `yaml:"smtp-port" env-required:"false"`
+		Email    string `yaml:"email" env-required:"false"`
+		Password string `yaml:"password" env-required:"false"`
+	} `yaml:"notifyer" env-required:"false"`
 }
 
 func LoadConfig() Cfg {

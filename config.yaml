@@ -13,3 +13,9 @@ postgres:
   host: localhost
   migrate: true
   sslmode: disable
+
+notifyer:
+  smtp-host: smtp.gmail.com
+  smtp-port: 587
+  email:  "___email"
+  password: "___password"
