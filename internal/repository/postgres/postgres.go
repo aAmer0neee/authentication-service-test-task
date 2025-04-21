@@ -40,12 +40,12 @@ func Connect(cfg config.Cfg) (*PostgresRepository, error) {
 	return &PostgresRepository{db: postgres}, nil
 }
 
-func (r *PostgresRepository) AddRecord(record *domain.User, hash string,pairId uuid.UUID) error {
+func (r *PostgresRepository) AddRecord(record *domain.User, hash string, pairId uuid.UUID) error {
 	return r.db.Create(&Users{
 		Id:        record.Id,
 		IpAddress: record.IpAddress.String(),
 		TokenHash: hash,
-		PairId: pairId,
+		PairId:    pairId,
 		Email:     record.Email,
 	}).Error
 }
@@ -54,7 +54,7 @@ func (r *PostgresRepository) UpdateRecord(record *domain.User, hash string, pair
 	return r.db.Where("id = ?", record.Id).Updates(&Users{
 		IpAddress: record.IpAddress.String(),
 		TokenHash: hash,
-		PairId: pairId,
+		PairId:    pairId,
 	}).Error
 }
 
@@ -68,6 +68,6 @@ func (r *PostgresRepository) GetRecord(id uuid.UUID) (*domain.User, error) {
 		Email:        record.Email,
 		IpAddress:    net.ParseIP(record.IpAddress),
 		RefreshToken: record.TokenHash,
-		TokenPairId: record.PairId,
+		TokenPairId:  record.PairId,
 	}, nil
 }

@@ -9,7 +9,7 @@ const (
 	envLocal = "local"
 )
 
-func ConfigureLogger(env string) *slog.Logger {
+func New(env string) *slog.Logger {
 
 	var logger *slog.Logger
 

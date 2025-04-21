@@ -12,14 +12,7 @@ type User struct {
 	IpAddress    net.IP
 	AccessToken  string
 	RefreshToken string
-	TokenPairId uuid.UUID
-}
-
-type AccessClaims struct {
-	UserId    string
-	ExpiredAt float64
-	IpAddress string
-	PairId string
+	TokenPairId  uuid.UUID
 }
 
 type Tokens struct {

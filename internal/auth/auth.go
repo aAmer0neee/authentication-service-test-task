@@ -2,35 +2,33 @@ package auth
 
 import (
 	"errors"
+	"github.com/aAmer0neee/authentication-service-test-task/internal/domain"
+	"github.com/aAmer0neee/authentication-service-test-task/internal/notify"
+	"github.com/aAmer0neee/authentication-service-test-task/internal/repository"
+	"github.com/aAmer0neee/authentication-service-test-task/internal/token"
+	"github.com/google/uuid"
 	"log/slog"
 	"net"
 	"time"
-	"github.com/google/uuid"
-	"github.com/aAmer0neee/authentication-service-test-task/internal/config"
-	"github.com/aAmer0neee/authentication-service-test-task/internal/domain"
-	"github.com/aAmer0neee/authentication-service-test-task/internal/logger"
-	"github.com/aAmer0neee/authentication-service-test-task/internal/notify"
-	"github.com/aAmer0neee/authentication-service-test-task/internal/repository"
-
-
 )
 
+//go:generate mockgen -source=auth.go -destination=mocks/auth_mock.go -package=auth_mock
 type AuthService interface {
 	LoginUser(user *domain.User) (*domain.Tokens, error)
 	RefreshToken(inputUser *domain.User) (*domain.Tokens, error)
 }
 
 type authService struct {
-	repo repository.Repository
-	log  *slog.Logger
-	jwt  *JWTService
-	notify *notify.Notifyer
+	repo   repository.Repository
+	log    *slog.Logger
+	token  token.TokenService
+	notify notify.Notifyer
 }
 
 type keys struct {
-	pairId uuid.UUID
-	access  string
-	refresh string
+	pairId      uuid.UUID
+	access      string
+	refresh     string
 	refreshHash string
 }
 
@@ -40,12 +38,12 @@ var (
 	ErrorTokenExpired  = errors.New("токен устарел")
 )
 
-func New(r repository.Repository, cfg config.Cfg) AuthService {
+func New(r repository.Repository, token token.TokenService, notify notify.Notifyer, logger *slog.Logger) AuthService {
 	return &authService{
-		repo: r,
-		jwt:  configureJWT(cfg.AuthSecret),
-		log:  logger.ConfigureLogger(cfg.Server.Env),
-		notify: notify.New(&cfg),
+		repo:   r,
+		token:  token,
+		log:    logger,
+		notify: notify,
 	}
 }
 
@@ -55,7 +53,6 @@ func (s *authService) LoginUser(user *domain.User) (*domain.Tokens, error) {
 	if err != nil {
 		return nil, ErrorInvalidFormat
 	}
-	s.log.Info("log!log", "pair id", keys.pairId)
 
 	if err := s.repo.AddRecord(user, keys.refreshHash, keys.pairId); err != nil {
 		s.log.Info("cant't add record to db", "message", err)
@@ -71,7 +68,7 @@ func (s *authService) LoginUser(user *domain.User) (*domain.Tokens, error) {
 
 func (s *authService) RefreshToken(inputUser *domain.User) (*domain.Tokens, error) {
 
-	claims, err := s.jwt.validate(*inputUser)
+	claims, err := s.token.Validate(*inputUser)
 	if err != nil {
 		s.log.Info("access token invalid", "message", err)
 		return nil, ErrorInvalidTokens
@@ -85,24 +82,23 @@ func (s *authService) RefreshToken(inputUser *domain.User) (*domain.Tokens, erro
 		s.log.Info("can't find user at data base", "message", err)
 		return nil, ErrorInvalidTokens
 	}
-	s.log.Info("log2log", "pair id", registerUser.TokenPairId)
 
-	if err := s.jwt.compareBcryptTokens(
+	if err := s.token.CompareBcryptTokens(
 		registerUser.RefreshToken, inputUser.RefreshToken); err != nil {
 		s.log.Info("refresh tokens not equal", "message", err)
 		return nil, ErrorInvalidTokens
 	}
 
-	if  registerUser.TokenPairId != uuid.MustParse(claims.PairId) {
-		s.log.Info("access token reuse","old",registerUser.AccessToken,"new", uuid.MustParse(claims.PairId))
+	if registerUser.TokenPairId != uuid.MustParse(claims.PairId) {
+		s.log.Info("access token reuse", "old", registerUser.AccessToken, "new", uuid.MustParse(claims.PairId))
 		return nil, ErrorInvalidTokens
 	}
 
-	if !registerUser.IpAddress.Equal(inputUser.IpAddress)||
-			!inputUser.IpAddress.Equal(net.ParseIP(claims.IpAddress)){
-		//s.notify.SendMail(registerUser.Email,"подозрительная активность")
-		
-		s.log.Info("подозрительная активность***", "mail", registerUser.Email)
+	if !registerUser.IpAddress.Equal(inputUser.IpAddress) ||
+		!inputUser.IpAddress.Equal(net.ParseIP(claims.IpAddress)) {
+		//s.notify.SendMail(registerUser.Email,"вход с нвового ip")
+
+		s.log.Info("вход с нового ip***", "mail", registerUser.Email)
 	}
 
 	keys, err := s.getKeysPair(registerUser)
@@ -124,15 +120,15 @@ func (s *authService) RefreshToken(inputUser *domain.User) (*domain.Tokens, erro
 func (s *authService) getKeysPair(user *domain.User) (keys, error) {
 
 	pairId := uuid.New()
-	access, err := s.jwt.generateAccess(*user, pairId)
+	access, err := s.token.GenerateAccess(*user, pairId)
 	if err != nil {
 		s.log.Info("errror generate access key", "message", err)
 		return keys{}, err
 	}
 
-	refresh := s.jwt.generateRefresh()
+	refresh := s.token.GenerateRefresh()
 
-	refreshHash, err := s.jwt.generateBcryptToken(refresh)
+	refreshHash, err := s.token.GenerateBcryptToken(refresh)
 	if err != nil {
 		s.log.Info("errror hashing token", "message", err)
 		return keys{}, err
@@ -140,12 +136,8 @@ func (s *authService) getKeysPair(user *domain.User) (keys, error) {
 
 	return keys{
 		access:      access,
-		pairId:		pairId,
+		pairId:      pairId,
 		refresh:     refresh,
 		refreshHash: refreshHash,
 	}, nil
-}
-
-func (s*authService)validateKeysPair()(error){
-	return nil
 }

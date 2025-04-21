@@ -13,5 +13,5 @@ type Users struct {
 	IpAddress string    `gorm:"type:varchar(50)"`
 	TokenHash string    `gorm:"type:varchar(60)"`
 	CreatedAt time.Time `gorm:"autoCreateTime"`
-	PairId uuid.UUID `gorm:"type:uuid"`
+	PairId    uuid.UUID `gorm:"type:uuid"`
 }

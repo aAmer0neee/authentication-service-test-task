@@ -1,5 +1,5 @@
 server:
-  host: localhost
+  host: 0.0.0.0 #localhost
   port: 8888
   env: local
 
@@ -10,7 +10,7 @@ postgres:
   password: postgres
   name: mydb
   port: 5432
-  host: localhost
+  host: postgres #localhost
   migrate: true
   sslmode: disable
 

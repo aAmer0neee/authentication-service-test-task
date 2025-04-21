@@ -6,16 +6,21 @@ import (
 	"github.com/aAmer0neee/authentication-service-test-task/internal/config"
 )
 
-type Notifyer struct {
+//go:generate mockgen -source=notify.go -destination=mocks/notify_mock.go -package=notify_mock
+type Notifyer interface {
+	SendMail(recipient, message string) error
+}
+
+type email struct {
 	smtpHost string
 	smtpPort string
 	sender   string
 	auth     smtp.Auth
 }
 
-func New(cfg *config.Cfg) *Notifyer {
+func New(cfg *config.Cfg) Notifyer {
 
-	return &Notifyer{
+	return &email{
 		smtpHost: cfg.Notifyer.SmtpHost,
 		smtpPort: cfg.Notifyer.SmtpPort,
 		sender:   cfg.Notifyer.Email,
@@ -27,11 +32,11 @@ func New(cfg *config.Cfg) *Notifyer {
 	}
 }
 
-func (n *Notifyer) SendMail(recipient, message string) error {
+func (n *email) SendMail(recipient, message string) error {
 	return smtp.SendMail(
 		n.smtpHost+":"+n.smtpPort,
 		n.auth,
 		n.sender,
 		[]string{recipient},
-		[]byte("Subject: Warning Notification\r\n\r\n" + message))
+		[]byte("Subject: Warning Notification\r\n\r\n"+message))
 }
